@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>نظام مخزون الإطارات</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f2f2f2;color:#111;direction:rtl;min-height:100vh}
+
+/* HEADER */
+.header{background:#111;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header h1{font-size:16px;font-weight:900}
+.hbtns{display:flex;gap:6px}
+.hbtn{background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:700}
+.hbtn:hover{background:rgba(255,255,255,0.25)}
+
+/* TABS */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;overflow-x:auto;padding:0 8px}
+.tab{padding:11px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#999;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab.active{color:#111;border-bottom-color:#111}
+
+/* SEARCH */
+.search-area{background:#fff;padding:12px;border-bottom:1px solid #e0e0e0}
+.search-input{width:100%;padding:10px 14px;border:2px solid #ddd;border-radius:6px;font-size:14px;outline:none;direction:rtl;margin-bottom:8px}
+.search-input:focus{border-color:#111}
+.search-btns{display:flex;gap:8px}
+.sbtn{padding:8px 16px;border:none;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer}
+.sbtn-primary{background:#111;color:#fff}
+.sbtn-sec{background:#e8e8e8;color:#111}
+
+/* STATS */
+.stats{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;background:#f9f9f9}
+.stat{background:#fff;border:1.5px solid #e0e0e0;border-radius:6px;padding:8px 14px;min-width:110px;text-align:center;flex-shrink:0}
+.stat-n{font-size:20px;font-weight:900}
+.stat-l{font-size:10px;color:#888;margin-top:2px}
+
+/* CONTENT */
+.content{padding:10px}
+
+/* SECTION */
+.section{background:#fff;border:1.5px solid #e0e0e0;border-radius:6px;margin-bottom:8px;overflow:hidden}
+.sec-head{background:#111;color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.sec-head h3{font-size:13px;font-weight:900}
+.sec-meta{font-size:10px;opacity:.65;margin-top:2px}
+.sec-actions{display:flex;gap:6px;align-items:center}
+.sec-btn{background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700}
+.sec-btn:hover{background:rgba(255,255,255,0.28)}
+.sec-btn.danger{background:rgba(255,60,60,0.25);border-color:rgba(255,60,60,0.4)}
+.toggle-arrow{font-size:14px;transition:transform .2s;margin-right:4px}
+.toggle-arrow.closed{transform:rotate(180deg)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:500px}
+th{background:#f4f4f4;padding:7px 8px;font-size:10px;font-weight:800;text-align:center;border-bottom:1.5px solid #e0e0e0;color:#555;white-space:nowrap}
+td{padding:7px 8px;font-size:12px;text-align:center;border-bottom:1px solid #eee;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+td.name-col{text-align:right;font-weight:700;min-width:120px}
+
+/* EDITABLE */
+.ed{border:1px solid transparent;border-radius:3px;padding:2px 5px;cursor:pointer;display:inline-block;min-width:40px;min-height:20px;transition:border-color .15s,background .15s}
+.ed:hover{border-color:#ddd;background:#f5f5f5}
+.ed:focus{outline:none;border-color:#111;background:#fff}
+
+/* COLORS */
+.c-low{color:#e74c3c;font-weight:900}
+.c-ok{color:#27ae60;font-weight:700}
+.c-zero{color:#bbb}
+.c-year{color:#2980b9;font-weight:700}
+
+/* ADD ROW */
+.add-row{width:100%;padding:8px;background:#f9f9f9;border:none;border-top:1px dashed #ddd;color:#999;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s,color .2s}
+.add-row:hover{background:#eee;color:#111}
+
+/* DEL BTN */
+.del{background:none;border:none;color:#ddd;cursor:pointer;font-size:13px;padding:2px 5px;border-radius:3px;transition:color .2s}
+.del:hover{color:#e74c3c}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:10px;padding:22px;width:92%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.modal h3{font-size:15px;font-weight:900;margin-bottom:14px}
+.modal input{width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:5px;font-size:13px;direction:rtl;margin-bottom:8px;outline:none}
+.modal input:focus{border-color:#111}
+.modal-btns{display:flex;gap:8px;margin-top:6px}
+.mbtn-p{flex:1;padding:9px;background:#111;color:#fff;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer}
+.mbtn-s{flex:1;padding:9px;background:#eee;color:#111;border:none;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#111;color:#fff;padding:9px 22px;border-radius:20px;font-size:13px;font-weight:700;z-index:300;transition:transform .3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* NO RESULTS */
+.no-res{text-align:center;padding:40px 20px;color:#aaa;font-size:14px}
+.add-size-btn{display:block;margin:10px auto;padding:10px 28px;background:#111;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer}
+
+@media(max-width:480px){
+  .header h1{font-size:13px}
+  .tab{padding:9px 10px;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🛞 مخزون الإطارات</h1>
+  <div class="hbtns">
+    <button class="hbtn" onclick="exportData()">💾 تصدير</button>
+    <button class="hbtn" onclick="document.getElementById('imp').click()">📂 استيراد</button>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="search-area">
+  <input class="search-input" id="q" type="text" placeholder="🔍 ابحث بالمقاس (205/55/16) أو الماركة..." oninput="render()">
+  <div class="search-btns">
+    <button class="sbtn sbtn-primary" onclick="searchAll()">🔍 بحث في كل الجنوط</button>
+    <button class="sbtn sbtn-sec" onclick="clearQ()">✕ مسح</button>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="content" id="content"></div>
+
+<!-- ADD SIZE MODAL -->
+<div class="overlay" id="szModal">
+  <div class="modal">
+    <h3>➕ إضافة مقاس جديد</h3>
+    <input id="szName" type="text" placeholder="المقاس (مثال: 225/55/17)">
+    <div class="modal-btns">
+      <button class="mbtn-p" onclick="doAddSize()">إضافة</button>
+      <button class="mbtn-s" onclick="closeModal('szModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TYPE MODAL -->
+<div class="overlay" id="tyModal">
+  <div class="modal">
+    <h3>➕ إضافة نوع / ماركة</h3>
+    <input id="tyName" type="text" placeholder="اسم الماركة">
+    <input id="tyOrigin" type="text" placeholder="البلد (كوري، صيني...)">
+    <input id="tyPrice" type="number" placeholder="السعر (جنيه)">
+    <input id="tyShop" type="number" placeholder="عدد المحل">
+    <input id="tyStore" type="number" placeholder="عدد المخزن">
+    <input id="tyYear" type="number" placeholder="سنة الإنتاج (مثال: 2024)" min="2000" max="2030">
+    <div class="modal-btns">
+      <button class="mbtn-p" onclick="doAddType()">إضافة</button>
+      <button class="mbtn-s" onclick="closeModal('tyModal')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATS = [
+  {id:'r13',label:'جنط 13'},
+  {id:'r14',label:'جنط 14'},
+  {id:'r15',label:'جنط 15'},
+  {id:'r16',label:'جنط 16'},
+  {id:'r17',label:'جنط 17'},
+  {id:'r18',label:'جنط 18'},
+  {id:'r19',label:'جنط 19'},
+  {id:'r20',label:'جنط 20'},
+  {id:'tr',label:'كاوتش النقل'},
+];
+
+function mkType(name, origin, price, shop, store, year) {
+  return { name: name||'', origin: origin||'', price: price||'', shop: shop||'', store: store||'', year: year||'' };
+}
+
+const DEFAULTS = {
+  r13: [
+    { size:'175/70/13', types:[mkType('جي تي','اندونيسي'),mkType('هي كوبا','صيني'),mkType('سينوفيل','صيني'),mkType('ميراج','صيني'),mkType('مرشال','كوري'),mkType('كروس ويند','صربي')] },
+    { size:'165/65/13', types:[mkType('بطلس','تركي'),mkType('ستار ماكس','تركي'),mkType('امريكان','تايلاندي')] },
+    { size:'155/65/13', types:[mkType('بطلس','تركي')] },
+    { size:'155/70/13', types:[mkType('جي تي','اندونيسي'),mkType('بطلس','تركي'),mkType('ستار ماكس','تركي')] },
+    { size:'185/60/13', types:[mkType('اكس ليرا','تايلاندي')] },
+    { size:'165/70/13', types:[mkType('دايموند','صيني'),mkType('بطلس','تركي')] },
+  ],
+  r14: [
+    { size:'165/60/14', types:[mkType('مرشال','كوري'),mkType('هي كوبا','صيني'),mkType('اتلندر','تايلاندي'),mkType('كومهو','كوري'),mkType('كروس ويند','صربي'),mkType('لاسا','تركي')] },
+    { size:'185/60/14', types:[mkType('هي كوبا','صيني'),mkType('لوفن','كوري'),mkType('هانكوك','مجري'),mkType('كروس ويند','صربي')] },
+    { size:'165/65/14', types:[mkType('اتلندر','تايلاندي'),mkType('هانكوك','كوري'),mkType('كروس ويند','صربي')] },
+    { size:'165/70/14', types:[mkType()] },
+    { size:'175/65/14', types:[mkType('هيدواي','صيني')] },
+    { size:'185/65/14', types:[mkType('لوفن','كوري'),mkType('ديليام','تايلاندي'),mkType('هي كوبا','صيني'),mkType('امريكان','تايلاندي')] },
+    { size:'185/70/14', types:[mkType('هانكوك','كوري'),mkType('شوينج','تايلاندي'),mkType('اتلاندر','تايلاندي')] },
+    { size:'175/70/14', types:[mkType()] },
+  ],
+  r15: [
+    { size:'185/65/15', types:[mkType('هانكوك','كوري'),mkType('اتلندر','تايلاندي'),mkType('هيدواي','صيني'),mkType('هاكوبا','صيني'),mkType('لوفن','كوري')] },
+    { size:'195/65/15', types:[mkType('ليو','صيني'),mkType('هانكوك','مجري'),mkType('هانكوك','كوري'),mkType('لاسا','تركي'),mkType('شاويانج','تايلاندي')] },
+    { size:'195/60/15', types:[mkType('ليو','صيني'),mkType('كروس ويند','صربي'),mkType('هيكوبا','صيني'),mkType('صنفل','صيني'),mkType('اتلندر','تايلاندي'),mkType('هانكوك','كوري'),mkType('لوفن','كوري')] },
+    { size:'195/50/15', types:[mkType('دينامو','صيني'),mkType('اتلندر','تايلاندي')] },
+    { size:'185/55/15', types:[mkType('كروس ويند','صربي'),mkType('مرشال','كوري'),mkType('اتلندر','تايلاندي')] },
+    { size:'175/50/15', types:[mkType('اتلندر','تايلاندي')] },
+    { size:'195/55/15', types:[mkType('شارينج','تايلاندي')] },
+    { size:'205/65/15', types:[mkType('كروس ويند','صربي'),mkType('هيكوبا','صيني')] },
+  ],
+  r16: [
+    { size:'205/55/16', types:[mkType('ميشلان','ألماني'),mkType('كونتيننتال','فرنساوي'),mkType('برجستون','تركي'),mkType('يوكوهاما','ياباني'),mkType('جدير','ألماني'),mkType('هانكوك','كوري'),mkType('هانكوك','مجري'),mkType('لوفن','كوري'),mkType('لاسيا','تركي'),mkType('بطلة','تركي'),mkType('تا','تايلاندي'),mkType('رود ستار','تايلاندي'),mkType('هيدواي','صيني')] },
+    { size:'205/60/16', types:[mkType('ميشلان','ألماني'),mkType('ديلوك','ياباني'),mkType('برجستون','بولندي'),mkType('هانكوك','كوري'),mkType('هانكوك','مجري'),mkType('كومهو','كوري')] },
+    { size:'195/50/16', types:[mkType('اطلس','تركي')] },
+    { size:'195/55/16', types:[mkType('كروس ويند','صربي'),mkType('كومكو','كوري'),mkType('ترانس ميت','')] },
+    { size:'195/60/16', types:[mkType('كروس ويند','صربي')] },
+    { size:'185/55/16', types:[mkType('ترانس ميت','')] },
+    { size:'205/65/16', types:[mkType('اتلندر','تايلاندي')] },
+    { size:'225/55/16', types:[mkType('كروسنت','صربي')] },
+    { size:'215/70/16', types:[mkType('كروس ويند','صربي')] },
+    { size:'215/65/16', types:[mkType()] },
+    { size:'215/60/16', types:[mkType('كروسنت','صربي')] },
+    { size:'215/55/16', types:[mkType('كروس ويند','صربي')] },
+    { size:'215/45/16', types:[mkType('بطلس','تركي')] },
+  ],
+  r17: [
+    { size:'225/45/17', types:[mkType('هانكوك','كوري'),mkType('لانجستر','تايلاندي'),mkType('ميشلان','اسباني'),mkType('كروس ويند','صربي'),mkType('كودير','فرنسي'),mkType('مارشال','كوري'),mkType('لوفن','كوري'),mkType('دينامو','صيني')] },
+    { size:'225/60/17', types:[mkType('هيكوبا','صيني'),mkType('كروس ويند','صربي'),mkType('هانكوك','مجري'),mkType('لانجستر','تايلاندي'),mkType('هانكوك','كوري')] },
+    { size:'225/50/17', types:[mkType('هيكوبا','صيني'),mkType('كومهو','كوري'),mkType('مارشال','كوري'),mkType('لوفن','كوري')] },
+    { size:'225/55/17', types:[mkType('كومهو','كوري'),mkType('كروس ويند','صربي')] },
+    { size:'215/45/17', types:[mkType('زيتا','تايلاندي'),mkType('دينامو','صيني'),mkType('مارشال','كوري')] },
+    { size:'215/50/17', types:[mkType('كومهو','كوري'),mkType('هانكوك','مجري'),mkType('يوكوهاما','ياباني')] },
+    { size:'215/55/17', types:[mkType('كروس ويند','صربي'),mkType('اتلندر','تايلاندي')] },
+    { size:'215/60/17', types:[mkType('كروس ويند','صربي'),mkType('مارشال','كوري')] },
+    { size:'205/45/17', types:[mkType('مارشال','كوري')] },
+    { size:'205/55/17', types:[mkType('كومهو','كوري'),mkType('هانكوك','مجري')] },
+    { size:'225/65/17', types:[mkType('لانكستر','تايلاندي'),mkType('لوفن','كوري')] },
+    { size:'215/65/17', types:[mkType('كروس ويند','صربي')] },
+  ],
+  r18: [
+    { size:'225/40/18', types:[mkType('زيتا','تايلاندي'),mkType('بطلس','تركي'),mkType('هانكوك','كوري'),mkType('كروس ويند','صربي'),mkType('اكس ليرا','اندونيسي'),mkType('مارشال','كوري'),mkType('دلوب','صيني')] },
+    { size:'225/45/18', types:[mkType('بطلس','تركي'),mkType('اتلندر','تايلاندي'),mkType('كروس ويند','صربي'),mkType('مارشال','كوري'),mkType('دينامو','صيني')] },
+    { size:'235/45/18', types:[mkType('ميشلان','اسباني'),mkType('مارشال','كوري'),mkType('كروس ويند','صربي'),mkType('دينامو','صيني'),mkType('امريكان','تايلاندي')] },
+    { size:'215/40/18', types:[mkType('زيتا','تايلاندي'),mkType('بطلس','تركي')] },
+    { size:'215/45/18', types:[mkType('بطلس','تركي'),mkType('زيتا','تايلاندي')] },
+    { size:'215/50/18', types:[mkType('كروس ويند','صربي'),mkType('مارشال','كوري')] },
+    { size:'215/55/18', types:[mkType('كروس ويند','صربي'),mkType('بطلس','تركي')] },
+    { size:'215/60/18', types:[mkType('كروس ويند','صربي'),mkType('دينامو','صيني'),mkType('بطلس','تركي')] },
+    { size:'225/50/18', types:[mkType('كروس ويند','صربي'),mkType('هانكوك','كوري'),mkType('مارشال','ألماني')] },
+    { size:'225/55/18', types:[mkType('ميشلان','ألماني'),mkType('كروس ويند','صربي'),mkType('دينامو','صيني')] },
+    { size:'225/60/18', types:[mkType('اطلس','تايلاندي')] },
+    { size:'235/50/18', types:[mkType('اتلندر','تايلاندي'),mkType('كروس ويند','صربي'),mkType('بطلس','تركي')] },
+    { size:'235/55/18', types:[mkType()] },
+    { size:'245/45/18', types:[mkType('لوفن','كوري')] },
+  ],
+  r19: [
+    { size:'235/50/19', types:[mkType('كروس ويند','صربي'),mkType('دينامو','صيني'),mkType('هانكوك','كوري'),mkType('بيرلي','روماني'),mkType('مارشال','كوري')] },
+    { size:'245/45/19', types:[mkType('ليو','تايلاندي'),mkType('ميشلان',''),mkType('بيرلي','روماني'),mkType('بيرلي','ألماني'),mkType('لانكستر','تايلاندي'),mkType('مارشال','كوري')] },
+    { size:'255/45/19', types:[mkType('ليو','تايلاندي'),mkType('كونتيننتال',''),mkType('ميشلان','بولندي'),mkType('بيرلي','روماني')] },
+    { size:'235/45/19', types:[mkType('اكس ليرا','اندونيسي')] },
+    { size:'235/40/19', types:[mkType('كروس ويند','صربي'),mkType('رودستون','كوري')] },
+    { size:'235/55/19', types:[mkType('اطلس','تركي')] },
+    { size:'245/40/19', types:[mkType('بيرلي','')] },
+    { size:'225/45/19', types:[mkType('كونا','أمريكا')] },
+    { size:'225/55/19', types:[mkType('كروس ويند','صربي')] },
+  ],
+  r20: [
+    { size:'235/50/20', types:[mkType('بيرلي','روماني'),mkType('بيرلي','ألماني')] },
+    { size:'235/45/20', types:[mkType('هانكوك','مجري')] },
+    { size:'255/40/20', types:[mkType('بطلس','تركي')] },
+    { size:'255/45/20', types:[mkType('كروس ويند','صربي'),mkType('ويست ليك','تايلاندي')] },
+    { size:'265/45/20', types:[mkType('كونتيننتال','')] },
+    { size:'265/50/20', types:[mkType('كومهو','كوري')] },
+  ],
+  tr: [
+    { size:'225/70/15 — 8 تيلا', types:[mkType('هاكوبا','صيني')] },
+    { size:'215/70/15 — 8 تيلا', types:[mkType('ميشلان','تايلاندي'),mkType('اتلندر','تايلاندي'),mkType('Pace','صيني')] },
+    { size:'195/R14 — 8 تيلا', types:[mkType('Thunderer','تايلاندي'),mkType('اوفيشن','صيني')] },
+    { size:'155/12 — 8 تيلا', types:[mkType('هاكوبا','صيني')] },
+    { size:'175/70/12 — 8 تيلا', types:[mkType('لاسا','تركي')] },
+    { size:'750/16 — 16 تيلا', types:[mkType('دبل كوين','صيني')] },
+  ],
+};
+
+// STATE
+let DB = JSON.parse(localStorage.getItem('tireDB') || 'null') || JSON.parse(JSON.stringify(DEFAULTS));
+let tab = 'r13';
+let addSzTarget = null;
+let addTyTarget = null;
+
+function save() { localStorage.setItem('tireDB', JSON.stringify(DB)); }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function exportData() {
+  const b = new Blob([JSON.stringify(DB, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = 'tires_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('✅ تم التصدير');
+}
+
+function importData(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      DB = JSON.parse(ev.target.result);
+      save(); renderAll(); toast('✅ تم الاستيراد');
+    } catch { toast('❌ خطأ في الملف'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+// TABS
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = CATS.map(c =>
+    `<div class="tab ${c.id===tab?'active':''}" onclick="switchTab('${c.id}')">${c.label}</div>`
+  ).join('');
+}
+
+function switchTab(id) {
+  tab = id;
+  document.getElementById('q').value = '';
+  renderAll();
+}
+
+// STATS
+function renderStats() {
+  const d = DB[tab] || [];
+  let types=0, shop=0, store=0;
+  d.forEach(s => s.types.forEach(t => {
+    if(t.name) types++;
+    shop += parseInt(t.shop)||0;
+    store += parseInt(t.store)||0;
+  }));
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-n">${d.length}</div><div class="stat-l">المقاسات</div></div>
+    <div class="stat"><div class="stat-n">${types}</div><div class="stat-l">الأنواع</div></div>
+    <div class="stat"><div class="stat-n" style="color:#27ae60">${shop}</div><div class="stat-l">إجمالي المحل</div></div>
+    <div class="stat"><div class="stat-n" style="color:#2980b9">${store}</div><div class="stat-l">إجمالي المخزن</div></div>
+  `;
+}
+
+// COLOR
+function cc(v) {
+  const n = parseInt(v);
+  if (!v || v==='' || isNaN(n)) return 'c-zero';
+  if (n <= 2) return 'c-low';
+  return 'c-ok';
+}
+
+// RENDER SECTION
+function renderSection(sizeObj, realIdx) {
+  const shopT = sizeObj.types.reduce((a,t) => a+(parseInt(t.shop)||0), 0);
+  const storeT = sizeObj.types.reduce((a,t) => a+(parseInt(t.store)||0), 0);
+
+  const rows = sizeObj.types.map((t, ti) => `
+    <tr>
+      <td class="name-col">
+        <span class="ed" contenteditable="true"
+          onblur="upd(${realIdx},${ti},'name',this.textContent.trim())">${escHtml(t.name)}</span>
+      </td>
+      <td><span class="ed" contenteditable="true"
+        onblur="upd(${realIdx},${ti},'origin',this.textContent.trim())">${escHtml(t.origin)}</span></td>
+      <td><span class="ed" contenteditable="true"
+        onblur="upd(${realIdx},${ti},'price',this.textContent.trim())">${escHtml(t.price)}</span></td>
+      <td><span class="ed ${cc(t.shop)}" contenteditable="true"
+        onblur="upd(${realIdx},${ti},'shop',this.textContent.trim())">${escHtml(t.shop)}</span></td>
+      <td><span class="ed ${cc(t.store)}" contenteditable="true"
+        onblur="upd(${realIdx},${ti},'store',this.textContent.trim())">${escHtml(t.store)}</span></td>
+      <td><span class="ed c-year" contenteditable="true"
+        onblur="upd(${realIdx},${ti},'year',this.textContent.trim())">${escHtml(t.year)}</span></td>
+      <td><button class="del" onclick="delType(${realIdx},${ti})">✕</button></td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="section">
+      <div class="sec-head" onclick="toggleSec(this)">
+        <div>
+          <h3>📐 ${escHtml(sizeObj.size)}</h3>
+          <div class="sec-meta">محل: ${shopT} | مخزن: ${storeT}</div>
+        </div>
+        <div class="sec-actions" onclick="event.stopPropagation()">
+          <button class="sec-btn" onclick="openAddType(${realIdx})">+ نوع</button>
+          <button class="sec-btn danger" onclick="delSize(${realIdx})">🗑</button>
+          <span class="toggle-arrow">▲</span>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="text-align:right">الماركة / النوع</th>
+            <th>البلد</th><th>السعر (ج)</th>
+            <th>المحل</th><th>المخزن</th>
+            <th>سنة الإنتاج</th><th style="width:28px"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <button class="add-row" onclick="openAddType(${realIdx})">+ إضافة نوع</button>
+      </div>
+    </div>
+  `;
+}
+
+// RENDER MAIN
+function render() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const qc = q.replace(/[\/ \-\.]/g,'');
+  const d = DB[tab] || [];
+
+  let filtered = d.filter(s => {
+    if (!q) return true;
+    const sc = s.size.toLowerCase().replace(/[\/ \-\.]/g,'');
+    if (s.size.toLowerCase().includes(q) || sc.includes(qc)) return true;
+    return s.types.some(t => {
+      const ts = (t.name+' '+t.origin).toLowerCase();
+      return ts.includes(q) || ts.replace(/\s/g,'').includes(qc);
+    });
+  });
+
+  const container = document.getElementById('content');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="no-res">🔍 لا توجد نتائج<br><small>جرب "بحث في كل الجنوط"</small></div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(s => renderSection(s, d.indexOf(s))).join('') +
+    `<div style="text-align:center;padding:12px 0">
+      <button class="add-size-btn" onclick="openAddSize()">+ إضافة مقاس جديد</button>
+    </div>`;
+}
+
+// SEARCH ALL
+function searchAll() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  if (!q) { toast('اكتب كلمة بحث أولاً'); return; }
+  const qc = q.replace(/[\/ \-\.]/g,'');
+  const container = document.getElementById('content');
+  let html = '';
+  let total = 0;
+
+  CATS.forEach(cat => {
+    const d = DB[cat.id] || [];
+    d.forEach(s => {
+      const sc = s.size.toLowerCase().replace(/[\/ \-\.]/g,'');
+      const matchSz = s.size.toLowerCase().includes(q) || sc.includes(qc);
+      const matchTy = s.types.some(t => {
+        const ts = (t.name+' '+t.origin).toLowerCase();
+        return ts.includes(q) || ts.replace(/\s/g,'').includes(qc);
+      });
+      if (matchSz || matchTy) {
+        total++;
+        const rows = s.types.map(t => `
+          <tr>
+            <td class="name-col">${escHtml(t.name)}</td>
+            <td>${escHtml(t.origin)}</td>
+            <td>${escHtml(t.price)}</td>
+            <td class="${cc(t.shop)}">${t.shop||'0'}</td>
+            <td class="${cc(t.store)}">${t.store||'0'}</td>
+            <td class="c-year">${t.year||'-'}</td>
+          </tr>
+        `).join('');
+        html += `
+          <div class="section">
+            <div class="sec-head" onclick="toggleSec(this)" style="cursor:pointer">
+              <div>
+                <h3>📐 ${escHtml(s.size)}</h3>
+                <div class="sec-meta">${cat.label}</div>
+              </div>
+              <span class="toggle-arrow">▲</span>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr>
+                  <th style="text-align:right">الماركة</th>
+                  <th>البلد</th><th>السعر</th>
+                  <th>المحل</th><th>المخزن</th><th>سنة الإنتاج</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+    });
+  });
+
+  container.innerHTML = total === 0
+    ? '<div class="no-res">🔍 لا توجد نتائج في أي جنط</div>'
+    : `<div style="padding:8px 4px;font-size:12px;color:#888;font-weight:700">${total} نتيجة في كل الجنوط</div>` + html;
+}
+
+function clearQ() {
+  document.getElementById('q').value = '';
+  render();
+}
+
+// TOGGLE
+function toggleSec(header) {
+  const body = header.nextElementSibling;
+  const arr = header.querySelector('.toggle-arrow');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  if(arr) arr.classList.toggle('closed', !hidden);
+}
+
+// UPDATE
+function upd(si, ti, field, val) {
+  DB[tab][si].types[ti][field] = val;
+  save();
+  renderStats();
+}
+
+// DELETE TYPE
+function delType(si, ti) {
+  DB[tab][si].types.splice(ti, 1);
+  save(); render(); renderStats();
+  toast('🗑 تم الحذف');
+}
+
+// DELETE SIZE
+function delSize(si) {
+  if (!confirm('هل تريد حذف هذا المقاس نهائياً؟')) return;
+  DB[tab].splice(si, 1);
+  save(); render(); renderStats();
+  toast('🗑 تم حذف المقاس');
+}
+
+// ADD SIZE
+function openAddSize() {
+  document.getElementById('szName').value = '';
+  document.getElementById('szModal').classList.add('show');
+  setTimeout(() => document.getElementById('szName').focus(), 100);
+}
+function doAddSize() {
+  const name = document.getElementById('szName').value.trim();
+  if (!name) return;
+  DB[tab].push({ size: name, types: [mkType()] });
+  save(); closeModal('szModal'); render(); renderStats();
+  toast('✅ تم إضافة المقاس');
+}
+
+// ADD TYPE
+function openAddType(si) {
+  addTyTarget = si;
+  ['tyName','tyOrigin','tyPrice','tyShop','tyStore','tyYear'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('tyModal').classList.add('show');
+  setTimeout(() => document.getElementById('tyName').focus(), 100);
+}
+function doAddType() {
+  const name = document.getElementById('tyName').value.trim();
+  if (!name) { toast('اكتب اسم الماركة'); return; }
+  DB[tab][addTyTarget].types.push(mkType(
+    name,
+    document.getElementById('tyOrigin').value.trim(),
+    document.getElementById('tyPrice').value.trim(),
+    document.getElementById('tyShop').value.trim(),
+    document.getElementById('tyStore').value.trim(),
+    document.getElementById('tyYear').value.trim()
+  ));
+  save(); closeModal('tyModal'); render(); renderStats();
+  toast('✅ تم إضافة النوع');
+}
+
+// MODAL
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('show'); });
+});
+
+// Enter key in modals
+document.getElementById('szName').addEventListener('keydown', e => { if(e.key==='Enter') doAddSize(); });
+
+// ESCAPE HTML
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// INIT
+function renderAll() { renderTabs(); renderStats(); render(); }
+renderAll();
+</script>
+</body>
+</html>
